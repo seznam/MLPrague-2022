@@ -1,0 +1,2 @@
+model_checkpoint_path: "DCN_model_baseline.weights"
+all_model_checkpoint_paths: "DCN_model_baseline.weights"
