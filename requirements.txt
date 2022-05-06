@@ -189,6 +189,7 @@ tensorflow==2.5.1
 tensorflow-addons==0.15.0
 tensorflow-datasets==4.4.0
 tensorflow-estimator==2.5.0
+tensorflow-io==0.25.0
 tensorflow-metadata==1.6.0
 tensorflow-recommenders==0.5.2
 termcolor==1.1.0
