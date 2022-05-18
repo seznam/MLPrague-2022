@@ -12,6 +12,8 @@ from sklearn.feature_extraction.text import CountVectorizer
 from scipy.sparse import hstack
 
 
+BATCH_SIZE = 8_192
+
 def load_dataset(path, df, feat_cols, label_col="click", batch_size=BATCH_SIZE, cache=True):
     column_names = [*feat_cols, label_col] if label_col is not None else feat_cols
 
