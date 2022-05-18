@@ -5,6 +5,12 @@ import sklearn.metrics as metrics
 import matplotlib.pyplot as plt
 
 
+def get_user_prediction(user_predictions, per_user_predicted_items=20):
+    return np.argpartition(user_predictions, -per_user_predicted_items)[
+        -per_user_predicted_items:
+    ]
+
+
 def sample_items(all_news, random_state, frac=0.10, stratify_on="subcategory"):
     return all_news.groupby(stratify_on, group_keys=False).apply(
         lambda x: x.sample(frac=frac, random_state=random_state)

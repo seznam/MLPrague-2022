@@ -1,5 +1,80 @@
+import os
+import pandas as pd
+import numpy as np
+import pyarrow as pa
+
+import tensorflow_io.arrow as arrow_io
+
+import tensorflow as tf
+from tensorflow_io.python.ops.arrow_dataset_ops import arrow_schema_to_tensor_types
+
 from sklearn.feature_extraction.text import CountVectorizer
 from scipy.sparse import hstack
+
+
+def load_dataset(path, df, feat_cols, label_col="click", batch_size=BATCH_SIZE, cache=True):
+    column_names = [*feat_cols, label_col] if label_col is not None else feat_cols
+
+    schema = pa.Schema.from_pandas(df)
+    columns = [schema.get_field_index(f) for f in column_names]
+    types, shapes = arrow_schema_to_tensor_types(schema)
+    types = tuple(types[c] for c in columns)
+    shapes = tuple(shapes[c] for c in columns)
+
+    def to_named(*args):
+        if label_col is not None:
+            return ({f: n for f, n in zip(feat_cols, args[:-1])},
+                    tf.cast(args[-1], tf.int32))
+        else:
+            return {f: n for f, n in zip(feat_cols, args)}
+
+    ds = arrow_io.ArrowFeatherDataset(
+        [path],
+        columns=columns,
+        output_types=types,
+        output_shapes=shapes,
+        batch_size=batch_size
+    ).map(to_named)
+
+    if cache:
+        ds = ds.cache(f"/tmp/cache-{os.path.basename(path)}")
+
+    return ds
+
+
+def prepare_dataset(input_path, output_path, emb_vecs, overwrite=False):
+    if os.path.exists(output_path) and not overwrite:
+        return
+
+    behaviors = pd.read_csv(input_path, sep="\t")
+
+    e_df = (
+        behaviors[
+            [
+                "userid",
+                "slateid",
+                "history",
+                "impressions",
+                "history_all_categories",
+                "history_all_subcategories",
+            ]
+        ]
+        .assign(
+            impression_arr=lambda x: x.impressions.map(
+                lambda ii: [i.split("-") for i in ii.split(" ")]
+            )
+        )
+        .drop(columns="impressions")
+        .assign(user_embedding=lambda x: [e for e in emb_vecs.astype(np.float32)])
+        .explode("impression_arr")
+        .assign(impression=lambda x: x.impression_arr.map(lambda xx: xx[0]))
+        .assign(click=lambda x: x.impression_arr.map(lambda xx: int(xx[1])))
+        .drop(columns="impression_arr")
+        .assign(history_size=lambda x: x.history.map(lambda xx: len(xx.split())))
+    )
+
+    e_df.reset_index(drop=True).to_feather(output_path)
+
 
 
 def transform_behaviors_to_coldstart(behaviors, news, cold_start_category):

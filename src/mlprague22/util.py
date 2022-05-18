@@ -1,4 +1,16 @@
 import os
+import random
+import numpy as np
+import tensorflow as tf
+
+
+RANDOM_SEED = 42
+
+
+def set_seed(seed=RANDOM_SEED):
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
 
 
 def mount_gdrive(path):
